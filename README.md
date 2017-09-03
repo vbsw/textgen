@@ -36,7 +36,7 @@ Example to print 100 bytes of text to standard output
 
 	$ textgen 100 std
 
-Example to print 100 kibibytes of text to file test.txt
+Example to print 100 kilobytes of text to file test.txt
 
 	$ textgen 100K test.txt
 
