@@ -7,6 +7,9 @@
 
 package main
 
+import(
+	"fmt"
+)
 
 type tStdWriter struct {
 }
@@ -16,6 +19,7 @@ func newStdWriter() *tStdWriter {
 	return stdWriter
 }
 
-func (this *tStdWriter) Write(p []byte) (n int, err error) {
-	return 0, nil
+func (this *tStdWriter) Write(bytes []byte) (int, error) {
+	fmt.Printf("%s",bytes)
+	return len(bytes), nil
 }

@@ -26,5 +26,5 @@ func (this *tErrorWriter) setInterpreter(clArgsInterpreter *tCLArgsInterpreter) 
 }
 
 func (this *tErrorWriter) writeError() {
-	fmt.Println("not emplemented")
+	fmt.Println("error: unknown")
 }

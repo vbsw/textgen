@@ -30,8 +30,21 @@ func main() {
 		infoWriter.writeInfo()
 
 	} else if clArgsInterpreter.isValidGenerate() {
-		writer := createWriterFromInterpreter(clArgsInterpreter)
+		var writer io.Writer
+
+		if clArgsInterpreter.isOutputStd() {
+			stdWriter := newStdWriter()
+			writer = io.Writer(stdWriter)
+
+		} else {
+			fileWriter := newFileWriter()
+			fileWriter.setOutputFileName(clArgsInterpreter.outputFileName())
+			fileWriter.open()
+			defer fileWriter.close()
+			writer = io.Writer(fileWriter)
+		}
 		generator := newGenerator()
+		generator.setInterpreter(clArgsInterpreter)
 		generator.setWriter(writer)
 		generator.generate()
 
@@ -40,16 +53,4 @@ func main() {
 		errorWriter.setInterpreter(clArgsInterpreter)
 		errorWriter.writeError()
 	}
-}
-
-func createWriterFromInterpreter(clArgsInterpreter *tCLArgsInterpreter) io.Writer {
-		if clArgsInterpreter.isOutputStd() {
-			stdWriter := newStdWriter()
-			return io.Writer(stdWriter)
-
-		} else {
-			fileWriter := newFileWriter()
-			fileWriter.setOutputFileName(clArgsInterpreter.outputFileName())
-			return io.Writer(fileWriter)
-		}
 }
