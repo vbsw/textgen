@@ -10,14 +10,30 @@ Text Generator is distributed under the Boost Software License, version 1.0. (Se
 
 Text Generator is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the Boost Software License for more details.
 
-## Example
-Input:
+## Usage
+Basics
 
-	$ textgen 10 std
+	gentext [INFO-OPTION]
+	gentext SIZE OUTPUT {GENERATOR-OPTION}
 
-Output:
+INFO-OPTION
 
-	asdf d ewq
+	-help       prints this help
+	-version    prints version numer of gentext
+	-copyright  prints copyright of gentext
+
+GENERATOR-OPTION
+
+	-cN         sets the number of logical CPUs to N
+	-tN         sets the number of threads to N
+
+Example to print 100 bytes of text to standard output
+
+	$ gentext 100 std
+
+Example to print 100 kibibytes of text to file test.txt
+
+	$ gentext 100K test.txt
 
 ## Using Go
 Get this project:
