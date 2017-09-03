@@ -13,14 +13,14 @@ Text Generator is distributed in the hope that it will be useful, but WITHOUT AN
 ## Usage
 Basics
 
-	gentext [INFO-OPTION]
-	gentext SIZE OUTPUT {GENERATOR-OPTION}
+	textgen [INFO-OPTION]
+	textgen SIZE OUTPUT {GENERATOR-OPTION}
 
 INFO-OPTION
 
 	-help       prints this help
-	-version    prints version numer of gentext
-	-copyright  prints copyright of gentext
+	-version    prints version numer of textgen
+	-copyright  prints copyright of textgen
 
 GENERATOR-OPTION
 
