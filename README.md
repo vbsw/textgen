@@ -34,11 +34,11 @@ OUTPUT
 
 Example to print 100 bytes of text to standard output
 
-	$ gentext 100 std
+	$ textgen 100 std
 
 Example to print 100 kibibytes of text to file test.txt
 
-	$ gentext 100K test.txt
+	$ textgen 100K test.txt
 
 ## Using Go
 Get this project:
