@@ -7,7 +7,6 @@
 
 package main
 
-
 type tCLArgsInterpreter struct {
 	clArgs *tCLArgs
 }

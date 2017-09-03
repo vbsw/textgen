@@ -8,13 +8,13 @@
 package main
 
 import (
-	"os"
-	"io"
 	"github.com/vbsw/semver"
+	"io"
+	"os"
 )
 
 func Version() semver.Version {
-	version := semver.New(0,1,0)
+	version := semver.New(0, 1, 0)
 	return version
 }
 

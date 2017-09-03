@@ -7,7 +7,7 @@
 
 package main
 
-import(
+import (
 	"fmt"
 )
 
@@ -20,6 +20,6 @@ func newStdWriter() *tStdWriter {
 }
 
 func (this *tStdWriter) Write(bytes []byte) (int, error) {
-	fmt.Printf("%s",bytes)
+	fmt.Printf("%s", bytes)
 	return len(bytes), nil
 }

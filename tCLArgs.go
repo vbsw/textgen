@@ -26,13 +26,13 @@ const (
 )
 
 type tCLArgs struct {
-	results []int
+	results        []int
 	outputFileName string
-	unknowns []string
-	progName string
-	size int
-	threadsCount int
-	coresCount int
+	unknowns       []string
+	progName       string
+	size           int
+	threadsCount   int
+	coresCount     int
 }
 
 func newCLArgs() *tCLArgs {
@@ -44,7 +44,7 @@ func (this *tCLArgs) parse(args []string) {
 	this.results = make([]int, len(args))
 	this.results[0] = result_PROG_NAME
 
-	for i:=1; i<len(args); i+=1 {
+	for i := 1; i < len(args); i += 1 {
 		arg := args[i]
 
 		if parseHelp(arg) {
@@ -61,10 +61,10 @@ func (this *tCLArgs) parse(args []string) {
 		} else if i == 2 {
 			this.outputFileName = arg
 			this.results[i] = result_OUTPUT_FILE
-		} else if parseCount(arg,"-t") {
+		} else if parseCount(arg, "-t") {
 			this.threadsCount, _ = strconv.Atoi(arg[2:])
 			this.results[i] = result_THREADS_COUNT
-		} else if parseCount(arg,"-c") {
+		} else if parseCount(arg, "-c") {
 			this.coresCount, _ = strconv.Atoi(arg[2:])
 			this.results[i] = result_CORES_COUNT
 		} else {
@@ -132,7 +132,7 @@ func parseCopyright(argument string) bool {
 func parseNumber(argument string) bool {
 	for i, letter := range argument {
 		if letter < '0' || letter > '9' {
-			return i == len(argument) - 1 && (letter == 'K' || letter == 'k' || letter == 'M'  || letter == 'm'  || letter == 'G'  || letter == 'g')
+			return i == len(argument)-1 && (letter == 'K' || letter == 'k' || letter == 'M' || letter == 'm' || letter == 'G' || letter == 'g')
 		}
 	}
 	return true
@@ -182,31 +182,29 @@ func strToInt(str string) int {
 	}
 }
 
-
-
 func multiplier(multiplierByte byte) int {
 	switch multiplierByte {
-		case 'K':
-			return 1000
-		case 'k':
-			return 1024
-		case 'M':
-			return 1000 * 1000
-		case 'm':
-			return 1024 * 1024
-		case 'G':
-			return 1000 * 1000 * 1000
-		case 'g':
-			return 1024 * 1024 * 1024
-		case 'T':
-			return 1000 * 1000 * 1000 * 1000
-		case 't':
-			return 1024 * 1024 * 1024 * 1024
-		default:
-			if multiplierByte >= '0' && multiplierByte <= '9' {
-				return 1
-			} else {
-				return 0
-			}
+	case 'K':
+		return 1000
+	case 'k':
+		return 1024
+	case 'M':
+		return 1000 * 1000
+	case 'm':
+		return 1024 * 1024
+	case 'G':
+		return 1000 * 1000 * 1000
+	case 'g':
+		return 1024 * 1024 * 1024
+	case 'T':
+		return 1000 * 1000 * 1000 * 1000
+	case 't':
+		return 1024 * 1024 * 1024 * 1024
+	default:
+		if multiplierByte >= '0' && multiplierByte <= '9' {
+			return 1
+		} else {
+			return 0
+		}
 	}
 }

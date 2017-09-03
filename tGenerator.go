@@ -9,18 +9,18 @@ package main
 
 import (
 	"io"
-	"time"
 	"math/rand"
+	"time"
 )
 
 const (
-	const_BUFFER_SIZE   = 1024*1024
+	const_BUFFER_SIZE   = 1024 * 1024
 	const_MAX_WORD_SIZE = 20
 )
 
 type tGenerator struct {
 	clArgsInterpreter *tCLArgsInterpreter
-	writer io.Writer
+	writer            io.Writer
 }
 
 func newGenerator() *tGenerator {
@@ -38,18 +38,18 @@ func (this *tGenerator) setWriter(writer io.Writer) {
 
 func (this *tGenerator) generate() {
 	bytesWritten := 0
-	bytes := make([]byte,const_BUFFER_SIZE)
+	bytes := make([]byte, const_BUFFER_SIZE)
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	for bytesWritten + const_BUFFER_SIZE <= this.clArgsInterpreter.clArgs.size {
+	for bytesWritten+const_BUFFER_SIZE <= this.clArgsInterpreter.clArgs.size {
 		bytesWritten += const_BUFFER_SIZE
-		fillBytes(bytes,random)
+		fillBytes(bytes, random)
 		this.writer.Write(bytes)
 	}
 	if bytesWritten < this.clArgsInterpreter.clArgs.size {
 		bytesLeftToWrite := this.clArgsInterpreter.clArgs.size - bytesWritten
 		bytes = bytes[:bytesLeftToWrite]
-		fillBytes(bytes,random)
+		fillBytes(bytes, random)
 		this.writer.Write(bytes)
 	}
 }
@@ -64,18 +64,18 @@ func fillBytes(bytes []byte, random *rand.Rand) {
 				wordLength -= 1
 			} else {
 				bytes[i] = newRandomSeparator(random)
-				wordLength = newRandomNumber(random,2,const_MAX_WORD_SIZE)
+				wordLength = newRandomNumber(random, 2, const_MAX_WORD_SIZE)
 			}
 		} else {
 			bytes[i] = 'a'
-			wordLength = newRandomNumber(random,2,const_MAX_WORD_SIZE) - 1
+			wordLength = newRandomNumber(random, 2, const_MAX_WORD_SIZE) - 1
 		}
 	}
 }
 
 func newRandomNumber(random *rand.Rand, from, to int) int {
 	randomFloat := random.Float32()
-	number := int(randomFloat * float32(to - from)) + from
+	number := int(randomFloat*float32(to-from)) + from
 	return number
 }
 

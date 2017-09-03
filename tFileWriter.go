@@ -7,14 +7,13 @@
 
 package main
 
-
 import (
 	"os"
 )
 
 type tFileWriter struct {
 	fileName string
-	file *os.File
+	file     *os.File
 }
 
 func newFileWriter() *tFileWriter {
