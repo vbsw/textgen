@@ -11,7 +11,7 @@ Text Generator is distributed under the Boost Software License, version 1.0. (Se
 Text Generator is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the Boost Software License for more details.
 
 ## Usage
-Basics
+To generate text use one of the following syntaxes. SIZE is a number in bytes (you can append K, M or G to it).
 
 	textgen [INFO-OPTION]
 	textgen SIZE OUTPUT {GENERATOR-OPTION}
@@ -26,6 +26,11 @@ GENERATOR-OPTION
 
 	-cN         sets the number of logical CPUs to N
 	-tN         sets the number of threads to N
+
+OUTPUT
+
+	std         prints to standard output (i.e. terminal)
+	<file name> prints to file
 
 Example to print 100 bytes of text to standard output
 
