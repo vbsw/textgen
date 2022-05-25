@@ -1,2 +1,2 @@
-github.com/vbsw/semver v1.0.0 h1:julohOTpzYospfoDYJTKVJKqCFeDDN2ZkZtsHn25x9o=
-github.com/vbsw/semver v1.0.0/go.mod h1:RlK6h1JzyxRB6KCYA52cjQleVsDsKlBvtbfkilgYSLY=
+github.com/vbsw/golib/osargs v1.0.0 h1:cTp5ErrdDymRopZTsEG1AZ6wt6jPjL5VgLwobIhC/HI=
+github.com/vbsw/golib/osargs v1.0.0/go.mod h1:srWWEFAGR8t5Z+1kjPxBDim6xgTEHCTnGFS8M0C6mi8=
