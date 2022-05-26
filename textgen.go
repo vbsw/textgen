@@ -11,48 +11,45 @@ import (
 	"errors"
 	"fmt"
 	"github.com/vbsw/golib/osargs"
-//	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
-	"math/rand"
-	"time"
-//	"strings"
-//	"sync"
 	"runtime"
+	"strconv"
+	"time"
 )
 
 const (
-	wordLEN_MIN = 2
-	wordLEN_MAX = 30
+	wordLEN_MIN        = 2
+	wordLEN_MAX        = 30
 	newLinePROBABILITY = 0.1
-	wordsMAX_PER_LINE = 20
+	wordsPerLineMAX    = 20
 )
 
 type tParameters struct {
-	help           *osargs.Result
-	version        *osargs.Result
-	example        *osargs.Result
-	copyright      *osargs.Result
-	size        *osargs.Result
-	threads        *osargs.Result
-	system         *osargs.Result
-	buffer         *osargs.Result
-	output         *osargs.Result
+	help       *osargs.Result
+	version    *osargs.Result
+	example    *osargs.Result
+	copyright  *osargs.Result
+	size       *osargs.Result
+	threads    *osargs.Result
+	system     *osargs.Result
+	buffer     *osargs.Result
+	output     *osargs.Result
 	infoParams []*osargs.Result
 	cmdParams  []*osargs.Result
 }
 
 type tGenerator struct {
-	bytes []byte
+	bytes  []byte
 	random *rand.Rand
 }
 
 type tThreads struct {
-	chnl chan *tGenerator
-	counter int
+	chnl           chan *tGenerator
+	counter        int
 	maxThreadsUsed int
-	seedAdd int64
+	seedAdd        int64
 }
 
 func main() {
@@ -66,7 +63,7 @@ func main() {
 			newLine := interpretNewLine(params)
 			sizeFile, err = interpretSize(params, err)
 			maxThreads, err = interpretThreads(params, err)
-			sizeBuffer, err = interpretBuffer(params, len(newLine) + 1, err)
+			sizeBuffer, err = interpretBuffer(params, len(newLine)+1, err)
 			if err == nil {
 				if maxThreads == 1 {
 					err = generate(params, sizeFile, sizeBuffer, newLine)
@@ -266,6 +263,19 @@ func isMixed(params ...*osargs.Result) bool {
 	return false
 }
 
+func interpretNewLine(params *tParameters) []byte {
+	var newLine []byte
+	if params.system.Values[0] == "win" || params.system.Values[0] == "windows" {
+		newLine = make([]byte, 2)
+		newLine[0] = '\r'
+		newLine[1] = '\n'
+	} else {
+		newLine = make([]byte, 1)
+		newLine[0] = '\n'
+	}
+	return newLine
+}
+
 func interpretSize(params *tParameters, err error) (int, error) {
 	if err == nil {
 		var sizeFile int
@@ -310,19 +320,6 @@ func interpretBuffer(params *tParameters, sizeFile int, err error) (int, error) 
 		return 1024 * 1024 * 8, nil
 	}
 	return 0, err
-}
-
-func interpretNewLine(params *tParameters) []byte {
-	var newLine []byte
-	if params.system.Values[0] == "win" || params.system.Values[0] == "windows" {
-		newLine = make([]byte, 2)
-		newLine[0] = '\r'
-		newLine[1] = '\n'
-	} else {
-		newLine = make([]byte, 1)
-		newLine[0] = '\n'
-	}
-	return newLine
 }
 
 func generate(params *tParameters, sizeFile, sizeBuffer int, newLine []byte) error {
@@ -381,15 +378,15 @@ func newThreads(maxThreads int) *tThreads {
 func (threads *tThreads) nextGenerator(sizeBuffer int) (*tGenerator, bool) {
 	if threads.counter < cap(threads.chnl) {
 		select {
-			case generator := <- threads.chnl:
-				threads.counter--
-				return generator, true
-			default:
-				threads.counter++
-				threads.seedAdd++
-				if threads.maxThreadsUsed < threads.counter {
-					threads.maxThreadsUsed = threads.counter
-				}
+		case generator := <-threads.chnl:
+			threads.counter--
+			return generator, true
+		default:
+			threads.counter++
+			threads.seedAdd++
+			if threads.maxThreadsUsed < threads.counter {
+				threads.maxThreadsUsed = threads.counter
+			}
 		}
 		return newGenerator(sizeBuffer, threads.seedAdd), false
 	}
@@ -397,7 +394,7 @@ func (threads *tThreads) nextGenerator(sizeBuffer int) (*tGenerator, bool) {
 }
 
 func (threads *tThreads) nextGeneratorResult(sizeBuffer int) *tGenerator {
-	generator := <- threads.chnl
+	generator := <-threads.chnl
 	threads.counter--
 	return generator
 }
@@ -434,7 +431,7 @@ func (generator *tGenerator) generateText(newLine []byte) {
 		if lineBreak {
 			lengthWord := generator.randWordLength(len(generator.bytes) - writtenTotal - len(newLine))
 			words = 0
-			generator.randFill(generator.bytes[writtenTotal:writtenTotal+lengthWord])
+			generator.randFill(generator.bytes[writtenTotal : writtenTotal+lengthWord])
 			writtenTotal += lengthWord
 			for i, b := range newLine {
 				generator.bytes[writtenTotal+i] = b
@@ -443,7 +440,7 @@ func (generator *tGenerator) generateText(newLine []byte) {
 		} else {
 			lengthWord := generator.randWordLength(len(generator.bytes) - writtenTotal - len(newLine))
 			words++
-			generator.randFill(generator.bytes[writtenTotal:writtenTotal+lengthWord])
+			generator.randFill(generator.bytes[writtenTotal : writtenTotal+lengthWord])
 			writtenTotal += lengthWord
 			generator.bytes[writtenTotal] = ' '
 			writtenTotal++
@@ -465,7 +462,7 @@ func (generator *tGenerator) writeLimit(newLine []byte) int {
 
 func (generator *tGenerator) randWordLength(lengthMax int) int {
 	randomFloat := generator.random.Float32()
-	numberFloat := randomFloat * float32(wordLEN_MAX - wordLEN_MIN + 1)
+	numberFloat := randomFloat * float32(wordLEN_MAX-wordLEN_MIN+1)
 	lengthWord := int(numberFloat) + wordLEN_MIN
 	if lengthWord < lengthMax {
 		return lengthWord
@@ -474,7 +471,7 @@ func (generator *tGenerator) randWordLength(lengthMax int) int {
 }
 
 func (generator *tGenerator) randLineBreak(words int) bool {
-	if words < wordsMAX_PER_LINE {
+	if words < wordsPerLineMAX {
 		randomFloat := generator.random.Float32()
 		if randomFloat > newLinePROBABILITY {
 			return false
@@ -486,9 +483,9 @@ func (generator *tGenerator) randLineBreak(words int) bool {
 func (generator *tGenerator) randFill(bytes []byte) {
 	for i := range bytes {
 		randomFloat := generator.random.Float32()
-		numberFloat := randomFloat * float32((90 - 65) * 2 + 2)
+		numberFloat := randomFloat * float32((90-65)*2+2)
 		letter := byte(numberFloat)
-		if letter > 90 - 65 {
+		if letter > 90-65 {
 			bytes[i] = letter + 65 + 6
 		} else {
 			bytes[i] = letter + 65
@@ -525,18 +522,6 @@ func parseBytes(bytesStr string) (int, error) {
 	}
 	return 0, nil
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 func printInfo(params *tParameters) {
 	if params.help == nil {
