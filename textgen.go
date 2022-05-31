@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,6 +32,9 @@ type tParameters struct {
 	version    *osargs.Result
 	example    *osargs.Result
 	copyright  *osargs.Result
+	alpha      *osargs.Result
+	lower      *osargs.Result
+	upper      *osargs.Result
 	size       *osargs.Result
 	threads    *osargs.Result
 	system     *osargs.Result
@@ -41,8 +45,9 @@ type tParameters struct {
 }
 
 type tGenerator struct {
-	bytes  []byte
-	random *rand.Rand
+	bytes      []byte
+	random     *rand.Rand
+	randomFill func(*rand.Rand, []byte)
 }
 
 type tThreads struct {
@@ -50,6 +55,7 @@ type tThreads struct {
 	counter        int
 	maxThreadsUsed int
 	seedAdd        int64
+	randomFill     func(*rand.Rand, []byte)
 }
 
 func main() {
@@ -66,9 +72,17 @@ func main() {
 			sizeBuffer, err = interpretBuffer(params, len(newLine)+1, err)
 			if err == nil {
 				if maxThreads == 1 {
-					err = generate(params, sizeFile, sizeBuffer, newLine)
+					if params.outputToFile() {
+						err = generateFile(params, sizeFile, sizeBuffer, newLine)
+					} else {
+						err = generateStd(params, sizeFile, sizeBuffer, newLine)
+					}
 				} else {
-					err = generateGo(params, sizeFile, sizeBuffer, maxThreads, newLine)
+					if params.outputToFile() {
+						err = generateFileGo(params, sizeFile, sizeBuffer, maxThreads, newLine)
+					} else {
+						err = generateStdGo(params, sizeFile, sizeBuffer, maxThreads, newLine)
+					}
 				}
 			}
 		}
@@ -93,6 +107,9 @@ func (params *tParameters) initFromArgs(args *osargs.Arguments) error {
 		params.version = args.Parse("-v", "--version", "-version", "version")
 		params.example = args.Parse("-e", "--example", "-example", "example")
 		params.copyright = args.Parse("-c", "--copyright", "-copyright", "copyright")
+		params.alpha = args.Parse("-a", "--alpha", "-alpha", "alpha")
+		params.lower = args.Parse("-l", "--lower", "-lower", "lower")
+		params.upper = args.Parse("-u", "--upper", "-upper", "upper")
 		params.size = args.ParsePairs(delimiter, "-s", "--size", "-size", "size")
 		params.threads = args.ParsePairs(delimiter, "-t", "--threads", "-threads", "threads")
 		params.system = args.ParsePairs(delimiter, "-y", "--system", "-system", "system")
@@ -125,19 +142,29 @@ func (params *tParameters) parseSize(unparsedArgs []string) []string {
 
 func (params *tParameters) parseOutput(unparsedArgs []string) []string {
 	if params.output.Available() {
-		outputPath, err := filepath.Abs(params.output.Values[0])
-		if err == nil {
-			params.output.Values[0] = outputPath
+		outputLowerCase := strings.ToLower(params.output.Values[0])
+		if outputLowerCase == "std" {
+			params.output.Values[0] = outputLowerCase
 		} else {
-			panic(err.Error())
+			outputPath, err := filepath.Abs(params.output.Values[0])
+			if err == nil {
+				params.output.Values[0] = outputPath
+			} else {
+				panic(err.Error())
+			}
 		}
 	} else if len(unparsedArgs) > 0 {
-		// just accept the first unparsed argument
-		outputPath, err := filepath.Abs(unparsedArgs[0])
-		if err == nil {
-			params.output.Values = append(params.output.Values, outputPath)
+		outputLowerCase := strings.ToLower(unparsedArgs[0])
+		if outputLowerCase == "std" {
+			params.output.Values = append(params.output.Values, outputLowerCase)
 		} else {
-			panic(err.Error())
+			// just accept the first unparsed argument
+			outputPath, err := filepath.Abs(unparsedArgs[0])
+			if err == nil {
+				params.output.Values = append(params.output.Values, outputPath)
+			} else {
+				panic(err.Error())
+			}
 		}
 		return unparsedArgs[1:]
 	}
@@ -190,16 +217,23 @@ func (params *tParameters) poolInfoParams() {
 }
 
 func (params *tParameters) poolCmdParams() {
-	params.cmdParams = make([]*osargs.Result, 5)
+	params.cmdParams = make([]*osargs.Result, 8)
 	params.cmdParams[0] = params.size
 	params.cmdParams[1] = params.threads
 	params.cmdParams[2] = params.system
 	params.cmdParams[3] = params.buffer
 	params.cmdParams[4] = params.output
+	params.cmdParams[5] = params.alpha
+	params.cmdParams[6] = params.lower
+	params.cmdParams[7] = params.upper
 }
 
 func (params *tParameters) infoAvailable() bool {
 	return anyAvailable(params.infoParams)
+}
+
+func (params *tParameters) outputToFile() bool {
+	return params.output.Values[0] != "std"
 }
 
 func (params *tParameters) validateIODirectories() error {
@@ -322,17 +356,18 @@ func interpretBuffer(params *tParameters, sizeFile int, err error) (int, error) 
 	return 0, err
 }
 
-func generate(params *tParameters, sizeFile, sizeBuffer int, newLine []byte) error {
+func generateFile(params *tParameters, sizeFile, sizeBuffer int, newLine []byte) error {
 	pathOut := params.output.Values[0]
 	out, err := os.OpenFile(pathOut, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err == nil {
 		defer out.Close()
 		timeStart := time.Now().UnixNano()
-		generator := newGenerator(sizeBuffer, 0)
+		randomFill := randomFillFunc(params)
+		generator := newGenerator(sizeBuffer, 0, randomFill)
 		for sizeTotal, sizeAdd := 0, 0; sizeTotal < sizeFile && err == nil; sizeTotal += sizeAdd {
 			sizeAdd = generator.adjustBuffer(sizeFile - sizeTotal)
 			generator.generateText(newLine)
-			err = generator.write(out)
+			err = generator.writeFile(out)
 		}
 		timeEnd := time.Now().UnixNano()
 		printThreadsUsed(1)
@@ -341,18 +376,30 @@ func generate(params *tParameters, sizeFile, sizeBuffer int, newLine []byte) err
 	return err
 }
 
-func generateGo(params *tParameters, sizeFile, sizeBuffer int, maxThreads int, newLine []byte) error {
+func generateStd(params *tParameters, sizeFile, sizeBuffer int, newLine []byte) error {
+	randomFill := randomFillFunc(params)
+	generator := newGenerator(sizeBuffer, 0, randomFill)
+	for sizeTotal, sizeAdd := 0, 0; sizeTotal < sizeFile; sizeTotal += sizeAdd {
+		sizeAdd = generator.adjustBuffer(sizeFile - sizeTotal)
+		generator.generateText(newLine)
+		generator.writeStd()
+	}
+	return nil
+}
+
+func generateFileGo(params *tParameters, sizeFile, sizeBuffer int, maxThreads int, newLine []byte) error {
 	pathOut := params.output.Values[0]
 	out, err := os.OpenFile(pathOut, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err == nil {
 		defer out.Close()
 		timeStart := time.Now().UnixNano()
-		threads := newThreads(maxThreads)
+		randomFill := randomFillFunc(params)
+		threads := newThreads(maxThreads, randomFill)
 		for sizeTotal, sizeAdd := 0, 0; sizeTotal < sizeFile && err == nil; sizeTotal += sizeAdd {
 			generator, result := threads.nextGenerator(sizeBuffer)
 			if result {
 				sizeAdd = 0
-				err = generator.write(out)
+				err = generator.writeFile(out)
 			} else {
 				sizeAdd = generator.adjustBuffer(sizeFile - sizeTotal)
 				go threads.generateTextGo(generator, newLine)
@@ -360,7 +407,7 @@ func generateGo(params *tParameters, sizeFile, sizeBuffer int, maxThreads int, n
 		}
 		for threads.counter > 0 && err == nil {
 			generator := threads.nextGeneratorResult(sizeBuffer)
-			err = generator.write(out)
+			err = generator.writeFile(out)
 		}
 		timeEnd := time.Now().UnixNano()
 		printThreadsUsed(threads.maxThreadsUsed)
@@ -369,9 +416,30 @@ func generateGo(params *tParameters, sizeFile, sizeBuffer int, maxThreads int, n
 	return err
 }
 
-func newThreads(maxThreads int) *tThreads {
+func generateStdGo(params *tParameters, sizeFile, sizeBuffer int, maxThreads int, newLine []byte) error {
+	randomFill := randomFillFunc(params)
+	threads := newThreads(maxThreads, randomFill)
+	for sizeTotal, sizeAdd := 0, 0; sizeTotal < sizeFile; sizeTotal += sizeAdd {
+		generator, result := threads.nextGenerator(sizeBuffer)
+		if result {
+			sizeAdd = 0
+			generator.writeStd()
+		} else {
+			sizeAdd = generator.adjustBuffer(sizeFile - sizeTotal)
+			go threads.generateTextGo(generator, newLine)
+		}
+	}
+	for threads.counter > 0 {
+		generator := threads.nextGeneratorResult(sizeBuffer)
+		generator.writeStd()
+	}
+	return nil
+}
+
+func newThreads(maxThreads int, randomFill func(*rand.Rand, []byte)) *tThreads {
 	threads := new(tThreads)
 	threads.chnl = make(chan *tGenerator, maxThreads)
+	threads.randomFill = randomFill
 	return threads
 }
 
@@ -388,7 +456,7 @@ func (threads *tThreads) nextGenerator(sizeBuffer int) (*tGenerator, bool) {
 				threads.maxThreadsUsed = threads.counter
 			}
 		}
-		return newGenerator(sizeBuffer, threads.seedAdd), false
+		return newGenerator(sizeBuffer, threads.seedAdd, threads.randomFill), false
 	}
 	return threads.nextGeneratorResult(sizeBuffer), true
 }
@@ -404,10 +472,11 @@ func (threads *tThreads) generateTextGo(generator *tGenerator, newLine []byte) {
 	threads.chnl <- generator
 }
 
-func newGenerator(sizeBuffer int, seedAdd int64) *tGenerator {
+func newGenerator(sizeBuffer int, seedAdd int64, randomFill func(*rand.Rand, []byte)) *tGenerator {
 	generator := new(tGenerator)
 	generator.bytes = make([]byte, sizeBuffer)
 	generator.random = rand.New(rand.NewSource(time.Now().UnixNano() + seedAdd))
+	generator.randomFill = randomFill
 	return generator
 }
 
@@ -418,9 +487,13 @@ func (generator *tGenerator) adjustBuffer(sizeRemaining int) int {
 	return len(generator.bytes)
 }
 
-func (generator *tGenerator) write(out *os.File) error {
+func (generator *tGenerator) writeFile(out *os.File) error {
 	_, err := out.Write(generator.bytes)
 	return err
+}
+
+func (generator *tGenerator) writeStd() {
+	fmt.Printf("%s", generator.bytes)
 }
 
 func (generator *tGenerator) generateText(newLine []byte) {
@@ -431,7 +504,7 @@ func (generator *tGenerator) generateText(newLine []byte) {
 		if lineBreak {
 			lengthWord := generator.randWordLength(len(generator.bytes) - writtenTotal - len(newLine))
 			words = 0
-			generator.randFill(generator.bytes[writtenTotal : writtenTotal+lengthWord])
+			generator.randomFill(generator.random, generator.bytes[writtenTotal:writtenTotal+lengthWord])
 			writtenTotal += lengthWord
 			for i, b := range newLine {
 				generator.bytes[writtenTotal+i] = b
@@ -440,13 +513,13 @@ func (generator *tGenerator) generateText(newLine []byte) {
 		} else {
 			lengthWord := generator.randWordLength(len(generator.bytes) - writtenTotal - len(newLine))
 			words++
-			generator.randFill(generator.bytes[writtenTotal : writtenTotal+lengthWord])
+			generator.randomFill(generator.random, generator.bytes[writtenTotal:writtenTotal+lengthWord])
 			writtenTotal += lengthWord
 			generator.bytes[writtenTotal] = ' '
 			writtenTotal++
 		}
 	}
-	generator.randFill(generator.bytes[writtenTotal:])
+	generator.randomFill(generator.random, generator.bytes[writtenTotal:])
 }
 
 func (generator *tGenerator) writeLimit(newLine []byte) int {
@@ -480,15 +553,79 @@ func (generator *tGenerator) randLineBreak(words int) bool {
 	return true
 }
 
-func (generator *tGenerator) randFill(bytes []byte) {
+func randomFillFunc(params *tParameters) func(*rand.Rand, []byte) {
+	if params.alpha.Available() {
+		if params.lower.Available() {
+			return randomFillL
+		} else if params.upper.Available() {
+			return randomFillU
+		} else {
+			return randomFillA
+		}
+	} else if params.lower.Available() {
+		if params.upper.Available() {
+			return randomFillA
+		} else {
+			return randomFillL
+		}
+	} else if params.upper.Available() {
+		if params.lower.Available() {
+			return randomFillA
+		} else {
+			return randomFillU
+		}
+	}
+	return randomFillZ
+}
+
+func randomFillA(random *rand.Rand, bytes []byte) {
 	for i := range bytes {
-		randomFloat := generator.random.Float32()
+		randomFloat := random.Float32()
 		numberFloat := randomFloat * float32((90-65)*2+2)
 		letter := byte(numberFloat)
 		if letter > 90-65 {
 			bytes[i] = letter + 65 + 6
 		} else {
 			bytes[i] = letter + 65
+		}
+	}
+}
+
+func randomFillL(random *rand.Rand, bytes []byte) {
+	for i := range bytes {
+		randomFloat := random.Float32()
+		numberFloat := randomFloat * float32(122-97+1)
+		letter := byte(numberFloat)
+		bytes[i] = letter + 97
+	}
+}
+
+func randomFillU(random *rand.Rand, bytes []byte) {
+	for i := range bytes {
+		randomFloat := random.Float32()
+		numberFloat := randomFloat * float32(90-65+1)
+		letter := byte(numberFloat)
+		bytes[i] = letter + 65
+	}
+}
+
+func randomFillZ(random *rand.Rand, bytes []byte) {
+	for i := range bytes {
+		randomFloat := random.Float32()
+		numberFloat := randomFloat * float32(126-33+1-5)
+		letter := byte(numberFloat)
+		if letter > 95-33+1-5 {
+			bytes[i] = letter + 33 + 5
+		} else if letter > 93-33+1-4 {
+			bytes[i] = letter + 33 + 4
+		} else if letter > 91-33+1-3 {
+			bytes[i] = letter + 33 + 3
+		} else if letter > 38-33+1-2 {
+			bytes[i] = letter + 33 + 2
+		} else if letter > 33-33+1-1 {
+			bytes[i] = letter + 33 + 1
+		} else {
+			bytes[i] = letter + 33
 		}
 	}
 }
@@ -545,22 +682,28 @@ func printShortInfo() {
 
 func printHelp() {
 	message := "\nUSAGE\n"
-	message += "  textgen ( INFO | SIZE OUTPUT-FILE {OPTION} )\n\n"
+	message += "  textgen ( INFO | SIZE OUTPUT {OPTION} )\n\n"
 	message += "INFO\n"
 	message += "  -h, --help       print this help\n"
 	message += "  -v, --version    print version\n"
 	message += "  -c, --copyright  print copyright\n"
 	message += "SIZE\n"
 	message += "  -s=N[U]          size of file, U = unit (k/K, m/M or g/G)\n"
+	message += "OUTPUT\n"
+	message += "  <path>           write output to file <path>\n"
+	message += "  std              write output to standard output (e.g. console)\n"
 	message += "OPTION\n"
 	message += "  -t=N             maximum number of threads (default 1)\n"
 	message += "  -y=Y             operating system (e.g. -y=windows, for CRLF)\n"
-	message += "  -b=N[U]          buffer size per thread, U = unit (k/K, m/M or g/G)"
+	message += "  -b=N[U]          buffer size per thread, U = unit (k/K, m/M or g/G)\n"
+	message += "  -a               output letters, only\n"
+	message += "  -l               output lower case letters, only\n"
+	message += "  -u               output upper case letters, only"
 	fmt.Println(message)
 }
 
 func printVersion() {
-	fmt.Println("0.2.0")
+	fmt.Println("0.3.0")
 }
 
 func printExample() {

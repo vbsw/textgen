@@ -14,7 +14,7 @@ textgen is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
 
 ## Usage
 
-	textgen ( INFO | SIZE OUTPUT-FILE {OPTION} )
+	textgen ( INFO | SIZE OUTPUT {OPTION} )
 
 	INFO
 		-h, --help       print this help
@@ -22,10 +22,16 @@ textgen is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
 		-c, --copyright  print copyright
 	SIZE
 		-s=N[U]          size of file, U = unit (k/K, m/M or g/G)
+	OUTPUT
+		<path>           write output to file <path>
+		std              write output to standard output (e.g. console)
 	OPTION
 		-t=N             maximum number of threads (default 1)
 		-y=Y             operating system (e.g. -y=windows, for CRLF)
 		-b=N[U]          buffer size per thread, U = unit (k/K, m/M or g/G)
+		-a               output letters, only
+		-l               output lower case letters, only
+		-u               output upper case letters, only
 
 ## Example
 Create a new file, named test.txt, in working directory, with 100 kilobytes of random text.
