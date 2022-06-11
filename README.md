@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/vbsw/textgen.svg)](https://pkg.go.dev/github.com/vbsw/textgen) [![Go Report Card](https://goreportcard.com/badge/github.com/vbsw/textgen)](https://goreportcard.com/report/github.com/vbsw/textgen) [![Stability: Experimental](https://masterminds.github.io/stability/experimental.svg)](https://masterminds.github.io/stability/experimental.html)
 
 ## About
-textgen generates random text in file. textgen is published on <https://github.com/vbsw/textgen>.
+textgen creates a file with random text. textgen is published on <https://github.com/vbsw/textgen> and <https://gitlab.com/vbsw/textgen>.
 
 ## Copyright
 Copyright 2021, 2022, Vitali Baumtrok (vbsw@mailbox.org).
